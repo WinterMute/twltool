@@ -408,8 +408,10 @@ void nand_decrypt_dsi(u8 *emmc_cid, u32 *consoleID, char *in, char *out)
     dsi_set_ctr(&ctx, (u8*)base_ctr);
     
     // Endian-swap the input ConsoleID (provided from tad footer)
-    consoleID[1] = getbe32((u8*)consoleID);
-    consoleID[0] = getbe32((u8*)consoleID+4);    
+
+    u32 tmp = getbe32((u8*)&consoleID[0]);
+    consoleID[0] = getbe32((u8*)&consoleID[1]);
+    consoleID[1] = tmp;
     
     // Generate AES normalkey from consoleID (which comes in reverse word order)
     emmc_keyX[0] = consoleID[0];
