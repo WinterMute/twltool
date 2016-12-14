@@ -645,7 +645,7 @@ int main(int argc, char* argv[])
     bool isN3DS = false;
     bool encrypt = false;
     
-    printf("TWLTool v1.6\n");
+    printf("TWLTool v1.6.1\n");
     printf("  by WulfyStylez\n");
     printf("  Special thanks to CaitSith2\n\n");
     if(argc <= 1)
