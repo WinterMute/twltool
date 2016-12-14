@@ -401,26 +401,8 @@ void nand_decrypt_dsi(u8 *emmc_cid, u32 *consoleID, char *in, char *out)
     u8 emmc_cid_hash[20];
     u8 base_ctr[16];
     mbr mbr;
-    
-    // Prepare AES CTR by SHA1-hashing eMMC CID
-    sha1(emmc_cid_hash, emmc_cid, 16);
-    memcpy(base_ctr, emmc_cid_hash, 16);
-    dsi_set_ctr(&ctx, (u8*)base_ctr);
-    
-    // Endian-swap the input ConsoleID (provided from tad footer)
+    bool have_nocashinfo = false;
 
-    u32 tmp = getbe32((u8*)&consoleID[0]);
-    consoleID[0] = getbe32((u8*)&consoleID[1]);
-    consoleID[1] = tmp;
-    
-    // Generate AES normalkey from consoleID (which comes in reverse word order)
-    emmc_keyX[0] = consoleID[0];
-    emmc_keyX[1] = consoleID[0] ^ 0x24EE6906;
-    emmc_keyX[2] = consoleID[1] ^ 0xE65B601D;
-    emmc_keyX[3] = consoleID[1];
-    F_XY((u32*) emmc_normalkey, (u32*) emmc_keyX, (u32*) emmc_keyY);
-    dsi_set_key(&ctx, emmc_normalkey);
-    
     FILE* f_in = fopen(in,"r+b");
     FILE* f_out;
     if(!strcmp(in,out))
@@ -432,6 +414,37 @@ void nand_decrypt_dsi(u8 *emmc_cid, u32 *consoleID, char *in, char *out)
         printf("Input filename invalid!");
         return;
     }
+
+    // Endian-swap the input ConsoleID (provided from tad footer)
+
+    u32 tmp = getbe32((u8*)&consoleID[0]);
+    consoleID[0] = getbe32((u8*)&consoleID[1]);
+    consoleID[1] = tmp;
+
+    char nocashinfo[64];
+    fseek(f_in, -64, SEEK_END);
+    fread(nocashinfo,1,64,f_in);
+    fseek(f_in, 0, SEEK_SET);
+
+    if (memcmp(nocashinfo,"DSi eMMC CID/CPU",16) == 0 ) {
+        printf("reading consoleid/CID from nocashinfo block\n");
+        memcpy(consoleID,&nocashinfo[32],8);
+        memcpy(emmc_cid,&nocashinfo[16],16);
+        have_nocashinfo = true;
+    }
+
+    // Prepare AES CTR by SHA1-hashing eMMC CID
+    sha1(emmc_cid_hash, emmc_cid, 16);
+    memcpy(base_ctr, emmc_cid_hash, 16);
+    dsi_set_ctr(&ctx, (u8*)base_ctr);
+    
+    // Generate AES normalkey from consoleID (which comes in reverse word order)
+    emmc_keyX[0] = consoleID[0];
+    emmc_keyX[1] = consoleID[0] ^ 0x24EE6906;
+    emmc_keyX[2] = consoleID[1] ^ 0xE65B601D;
+    emmc_keyX[3] = consoleID[1];
+    F_XY((u32*) emmc_normalkey, (u32*) emmc_keyX, (u32*) emmc_keyY);
+    dsi_set_key(&ctx, emmc_normalkey);
     
     // get MBR from encrypted or decrypted NAND
     fread(&mbr, 1, 0x200, f_in);
@@ -475,6 +488,9 @@ void nand_decrypt_dsi(u8 *emmc_cid, u32 *consoleID, char *in, char *out)
     
     // process the rest, including unused (and unencrypted) third partition)
     file_copy_append(f_in, f_out, NULL, 0, 0x0EFC0000, 0x0F000000);
+
+    if (have_nocashinfo)    fwrite(nocashinfo,1,64,f_out);
+
     
     fclose(f_in);
     fclose(f_out);
@@ -654,7 +670,7 @@ int main(int argc, char* argv[])
     {
         if(!strcmp(argv[1], "nandcrypt"))
         {
-            if(argc < 6) {
+            if(argc < 4) {
                 printf("Invalid options!\n");
                 display_help();
                 exit(EXIT_FAILURE);
