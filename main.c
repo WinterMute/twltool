@@ -523,9 +523,9 @@ void es_crypt_file(char* in, char* out, u32 consoleID[2], bool encrypt, bool is3
     
     if(is3DS == false)
     {
-        // Endian-swap the input ConsoleID (provided from tad footer)
-        consoleID[1] = getbe32((u8*)consoleID);
-        consoleID[0] = getbe32((u8*)consoleID+4);
+        u32 tmp = getbe32((u8*)&consoleID[0]);
+        consoleID[0] = getbe32((u8*)&consoleID[1]);
+        consoleID[1] = tmp;
     }
     // set up keys for crypto (consoleid is in reverse word order)
     tadsrl_keyX[2] = consoleID[1] ^ 0xC80C4B72;
