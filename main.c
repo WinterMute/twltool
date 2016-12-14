@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "f_xy.h"
 #include "dsi.h"
-#include <sys\timeb.h> 
+#include <sys/timeb.h>
 #include "sha1.h"
 
 u32 tadsrl_keyX[4] = {0x4E00004A, 0x4A00004E, 0, 0};
