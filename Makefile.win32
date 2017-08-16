@@ -1,0 +1,16 @@
+OBJS = dsi.o main.o f_xy.o utils.o
+POLAR_OBJS = polarssl/aes.o polarssl/bignum.o polarssl/rsa.o polarssl/sha2.o sha1.o
+LIBS = -static-libstdc++ -static
+CXXFLAGS = -I. 
+CFLAGS = -Wall -Wno-unused-variable -Wno-unused-but-set-variable -I. -Os
+OUTPUT = twltool.exe
+CC = i686-w64-mingw32-gcc
+CXX = i686-w64-mingw32-g++
+LD = i686-w64-mingw32-ld
+
+main: $(OBJS) $(POLAR_OBJS) $(TINYXML_OBJS)
+	i686-w64-mingw32-g++ -o $(OUTPUT) $(LIBS) $(OBJS) $(POLAR_OBJS) $(TINYXML_OBJS)
+
+
+clean:
+	rm -rf $(OUTPUT) $(OBJS) $(POLAR_OBJS) $(TINYXML_OBJS)
