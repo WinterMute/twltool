@@ -878,9 +878,6 @@ int main(int argc, char* argv[])
             }
             if(out[0] == 0)
                 strcpy(out,in);
-            if(normalkey && consoleID) {
-                printf("Warning, both consoleID and normalkey provided, consoleID ignored...\n");
-            }
             if(normalkey) {
                 es_crypt_file_normalkey(in, out, (u32*)normalkey, encrypt);
             }
