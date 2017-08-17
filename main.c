@@ -741,6 +741,7 @@ int main(int argc, char* argv[])
     bool brute_cid = false;
     bool isN3DS = false;
     bool encrypt = false;
+    bool use_normalkey = false;
     
     printf("TWLTool v1.7\n");
     printf("  by WulfyStylez\n");
@@ -864,6 +865,7 @@ int main(int argc, char* argv[])
                 if(!strcmp(argv[i],"--normalkey")) {
                     if(read_hex_file_string(argv[i+1], normalkey, 16))
                         exit(EXIT_FAILURE);
+                    use_normalkey = true;
                 }
                 if(!strcmp(argv[i],"--encrypt")) {
                     encrypt = true;
@@ -878,16 +880,10 @@ int main(int argc, char* argv[])
             }
             if(out[0] == 0)
                 strcpy(out,in);
-            if(normalkey) {
+            if(use_normalkey) {
                 es_crypt_file_normalkey(in, out, (u32*)normalkey, encrypt);
-            }
-            else if(consoleID) {
+            } else {
                 es_crypt_file(in, out, (u32*)consoleID, encrypt, is3DS);
-            }
-            else {
-                printf("Invalid options!\n");
-                display_help();
-                exit(EXIT_FAILURE);
             }
         }
         else
