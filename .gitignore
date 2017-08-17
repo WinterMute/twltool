@@ -1,2 +1,5 @@
 *.exe
 *.o
+/.vs
+/obj
+/twltool

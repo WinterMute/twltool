@@ -588,6 +588,85 @@ void es_crypt_file(char* in, char* out, u32 consoleID[2], bool encrypt, bool is3
     free(in_data);
 }
 
+/**
+ * crypt system files (verdata DER files) with ES Block crypto and provided normalkey
+ */
+void es_crypt_file_normalkey(char* in, char* out, u32 normalkey[4], bool encrypt)
+{
+    u32 in_size;
+    u32 write_size = 0;
+    int ret = 0;
+    dsi_es_context ctx;
+    
+    FILE* f_in = fopen(in,"r+b");
+    FILE* f_out;
+    if(!strcmp(in,out))
+        f_out = fopen(out,"r+b");
+    else
+        f_out = fopen(out,"wb");
+    if(f_in == NULL)
+    {
+        printf("Input filename invalid! %s", in);
+        return;
+    }
+    if(f_out == NULL)
+    {
+        printf("Output filename invalid! %s", out);
+        return;
+    }
+    fseek(f_in, 0, SEEK_END);
+    in_size = ftell(f_in);
+    rewind(f_in);
+    
+    void* in_data = malloc(in_size);
+    if(!in_data)
+    {
+        printf("Failed to allocate input file buf!");
+        return;
+    }
+    fread(in_data, 1, in_size, f_in);
+
+    dsi_es_init(&ctx, (u8*)normalkey);
+
+    if(encrypt == false)
+    {
+        // decrypt!
+        write_size = in_size - 0x20;
+        ret = dsi_es_decrypt(&ctx, in_data, in_data + write_size, write_size);
+        if(ret == -1)
+        {
+            printf("ES magic check failed! Is your consoleID correct?");
+            return;
+        }
+        else if(ret == -2)
+        {
+            printf("Decrypted file size is incorrect!");
+            return;
+        }
+        else if(ret == -3)
+        {
+            printf("MAC mismatch! Continuing...");
+            return;
+        }
+        fwrite(in_data, 1, write_size, f_out);
+        printf("ES decrypt success!");
+    }
+    else
+    {
+        // encrypt!
+        u8 metablock[32];
+        
+        dsi_es_encrypt(&ctx, in_data, metablock, in_size);
+        fwrite(in_data, 1, in_size, f_out);
+        fwrite(metablock, 1, 0x20, f_out);
+        printf("ES encrypt complete!");
+    }
+    
+    fclose(f_in);
+    fclose(f_out);
+    free(in_data);
+}
+
 /*
  * Read a string and get a byte array or contents of a file from it
  * returns 0 on success
@@ -645,13 +724,15 @@ void display_help()
     printf("  --in [infile]                 Input SRL\n");
     printf("  --out [outfile]               Output file (optional)\n");
     printf("  --consoleid [file/hex ID]     DSi ConsoleID\n");
+    printf("  --normalkey [file/hex ID]     Normalkey for ES encryption (overrides consoleID)\n");
     printf("  --encrypt                     Encrypt file\n");
-    printf("  --3ds                         Using 3DS ConsoleID");
+    printf("  --3ds                         Using 3DS ConsoleID\n");
 }
 
 int main(int argc, char* argv[])
 {
     u8 consoleID[8] = {0};
+    u8 normalkey[16] = {0};
     u8 cid[16] = {0};
     char in[400] = {0};
     char out[400] = {0};
@@ -661,7 +742,7 @@ int main(int argc, char* argv[])
     bool isN3DS = false;
     bool encrypt = false;
     
-    printf("TWLTool v1.6.1\n");
+    printf("TWLTool v1.7\n");
     printf("  by WulfyStylez\n");
     printf("  Special thanks to CaitSith2\n\n");
     if(argc <= 1)
@@ -780,6 +861,10 @@ int main(int argc, char* argv[])
                     if(read_hex_file_string(argv[i+1], consoleID, 8))
                         exit(EXIT_FAILURE);
                 }
+                if(!strcmp(argv[i],"--normalkey")) {
+                    if(read_hex_file_string(argv[i+1], normalkey, 16))
+                        exit(EXIT_FAILURE);
+                }
                 if(!strcmp(argv[i],"--encrypt")) {
                     encrypt = true;
                 }
@@ -793,7 +878,17 @@ int main(int argc, char* argv[])
             }
             if(out[0] == 0)
                 strcpy(out,in);
-            es_crypt_file(in, out, (u32*)consoleID, encrypt, is3DS);
+            if(normalkey) {
+                es_crypt_file_normalkey(in, out, (u32*)normalkey, encrypt);
+            }
+            else if(consoleID) {
+                es_crypt_file(in, out, (u32*)consoleID, encrypt, is3DS);
+            }
+            else {
+                printf("Invalid options!\n");
+                display_help();
+                exit(EXIT_FAILURE);
+            }
         }
         else
         {
