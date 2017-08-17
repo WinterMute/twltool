@@ -7,7 +7,7 @@ OUTPUT = twltool
 CC = gcc
 
 main: $(OBJS) $(POLAR_OBJS) $(TINYXML_OBJS)
-	g++ -o $(OUTPUT) $(LIBS) $(OBJS) $(POLAR_OBJS) $(TINYXML_OBJS)
+	$(CC) -o $(OUTPUT) $(LIBS) $(OBJS) $(POLAR_OBJS) $(TINYXML_OBJS)
 
 
 clean:
