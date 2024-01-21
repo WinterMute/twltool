@@ -312,9 +312,9 @@ int dsi_es_decrypt( dsi_es_context* ctx,
 
 	if (scratchpad[0] != 0x3A)
 		return -1;
-        
-    if(chksize != size)
-        return -2;
+
+	if(chksize != size)
+		return -2;
 
 	memcpy(nonce, metablock + 17, 12);
 
